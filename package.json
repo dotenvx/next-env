@@ -8,14 +8,22 @@
     "url": "git+https://github.com/dotenvx/dotenvx.git",
     "directory": "packages/next-env"
   },
-  "main": "index.cjs",
+  "main": "dist/index.cjs",
   "files": [
-    "index.cjs"
+    "dist/**/*",
+    "LICENSE",
+    "README.md"
   ],
-  "dependencies": {
-    "@dotenvx/primitives": "0.3.0"
-  },
   "publishConfig": {
     "access": "public"
+  },
+  "scripts": {
+    "build": "esbuild index.cjs --bundle --platform=node --format=cjs --target=node16 --outfile=dist/index.cjs --legal-comments=none",
+    "prepack": "npm run build",
+    "prepublishOnly": "npm pack --dry-run"
+  },
+  "devDependencies": {
+    "@dotenvx/primitives": "0.3.0",
+    "esbuild": "^0.28.1"
   }
 }
