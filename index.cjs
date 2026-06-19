@@ -61,8 +61,7 @@ function processEnv (
 
   for (const envFile of loadedEnvFiles) {
     try {
-      let result = {}
-      result.parsed = parse(envFile.contents)
+      const result = parse(envFile.contents)
 
       if (
         result.parsed &&
