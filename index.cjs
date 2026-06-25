@@ -1,6 +1,6 @@
 const fs = require('fs')
 const path = require('path')
-const { parse } = require('@dotenvx/primitives')
+const { parseSync } = require('@dotenvx/primitives')
 
 let initialEnv
 let combinedEnv
@@ -61,7 +61,7 @@ function processEnv (
 
   for (const envFile of loadedEnvFiles) {
     try {
-      const result = parse(envFile.contents)
+      const result = parseSync(envFile.contents)
 
       if (
         result.parsed &&
