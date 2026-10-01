@@ -1,12 +1,14 @@
 const fs = require('fs')
 const path = require('path')
 const { parseSync } = require('@dotenvx/primitives')
+const { readPolicy, validatePolicy } = require('./envfile.cjs')
 
 let initialEnv
 let combinedEnv
 let parsedEnv
 let cachedLoadedEnvFiles = []
 let previousLoadedEnvFiles = []
+let policySignature
 
 function updateInitialEnv (newEnv) {
   if (!initialEnv) {
@@ -41,27 +43,38 @@ function processEnv (
   dir,
   log = console,
   forceReload = false,
-  onReload
+  onReload,
+  policy
 ) {
   if (!initialEnv) {
     initialEnv = Object.assign({}, process.env)
   }
 
+  policy = policy || readPolicy(dir, loadedEnvFiles.map(file => file.path))
+  const policyChanged = policy.signature !== policySignature
+
   if (
-    !forceReload &&
+    !policyChanged && !forceReload &&
     (process.env.__NEXT_PROCESSED_ENV || loadedEnvFiles.length === 0)
   ) {
     return [process.env]
   }
 
-  process.env.__NEXT_PROCESSED_ENV = 'true'
-
   const origEnv = Object.assign({}, initialEnv)
   const parsed = {}
+  const rows = []
 
   for (const envFile of loadedEnvFiles) {
     try {
-      const result = parseSync(envFile.contents)
+      const result = parseSync(envFile.contents, {
+        processEnv: { ...origEnv, ...parsed },
+        fk: [path.resolve(dir || '.', `${envFile.path}.keys`), path.resolve(dir || '.', '.env.keys')]
+      })
+      const strict = policy.schema.strictByFile?.get(path.resolve(dir || '.', envFile.path)) ?? policy.schema.strict
+      for (const error of result.errors || []) {
+        if (strict) throw error
+        log.error(error.message)
+      }
 
       if (
         result.parsed &&
@@ -73,17 +86,24 @@ function processEnv (
         if (onReload) onReload(envFile.path)
       }
 
+      const injected = {}
+      const existed = {}
       for (const key of Object.keys(result.parsed || {})) {
         if (
           typeof parsed[key] === 'undefined' &&
           typeof origEnv[key] === 'undefined'
         ) {
           parsed[key] = result.parsed[key]
+          injected[key] = result.parsed[key]
+        } else {
+          existed[key] = origEnv[key] ?? parsed[key]
         }
       }
 
+      rows.push({ src: envFile.contents, injected, existed })
       envFile.env = result.parsed || {}
     } catch (err) {
+      if (policy.schema.strictByFile?.get(path.resolve(dir || '.', envFile.path)) ?? policy.schema.strict) throw err
       log.error(
         `Failed to load env from ${path.join(dir || '', envFile.path)}`,
         err
@@ -91,6 +111,9 @@ function processEnv (
     }
   }
 
+  validatePolicy(policy.schema, { ...origEnv, ...parsed }, rows, log)
+  process.env.__NEXT_PROCESSED_ENV = 'true'
+  policySignature = policy.signature
   return [Object.assign(process.env, parsed), parsed]
 }
 
@@ -111,28 +134,27 @@ function loadEnvConfig (
     initialEnv = Object.assign({}, process.env)
   }
 
-  if (combinedEnv && !forceReload) {
-    return {
-      combinedEnv,
-      parsedEnv,
-      loadedEnvFiles: cachedLoadedEnvFiles
-    }
-  }
-
-  replaceProcessEnv(initialEnv)
-
-  previousLoadedEnvFiles = cachedLoadedEnvFiles
-  cachedLoadedEnvFiles = []
-
   const isTest = process.env.NODE_ENV === 'test'
   const mode = isTest ? 'test' : dev ? 'development' : 'production'
-
   const dotenvFiles = [
     `.env.${mode}.local`,
     mode !== 'test' && '.env.local',
     `.env.${mode}`,
     '.env'
   ].filter(Boolean)
+  // Read policy even on cache hits: edits, deletion, and malformed replacements
+  // must not be hidden by Next's cached environment.
+  const policy = readPolicy(dir, dotenvFiles)
+  const policyChanged = policy.signature !== policySignature
+  if (combinedEnv && !forceReload && !policyChanged) {
+    return { combinedEnv, parsedEnv, loadedEnvFiles: cachedLoadedEnvFiles }
+  }
+
+  combinedEnv = undefined
+  parsedEnv = undefined
+  replaceProcessEnv(initialEnv)
+  previousLoadedEnvFiles = cachedLoadedEnvFiles
+  cachedLoadedEnvFiles = []
 
   for (const envFile of dotenvFiles) {
     const dotEnvPath = path.join(dir, envFile)
@@ -162,8 +184,9 @@ function loadEnvConfig (
     cachedLoadedEnvFiles,
     dir,
     log,
-    forceReload,
-    onReload
+    forceReload || policyChanged,
+    onReload,
+    policy
   )
 
   combinedEnv = result[0]

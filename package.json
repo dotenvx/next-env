@@ -20,10 +20,11 @@
   "scripts": {
     "build": "esbuild index.cjs --bundle --platform=node --format=cjs --target=node16 --outfile=dist/index.cjs --legal-comments=none --minify",
     "prepack": "npm run build",
-    "prepublishOnly": "npm pack --dry-run"
+    "prepublishOnly": "npm pack --dry-run",
+    "test": "node --test tests/*.test.cjs"
   },
   "devDependencies": {
-    "@dotenvx/primitives": "2.1.1",
+    "@dotenvx/primitives": "git+https://github.com/dotenvx/primitives.git#de8a22a88f8209673a6ade34efedbddc98af80b1",
     "esbuild": "^0.28.1"
   }
 }

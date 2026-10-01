@@ -130,3 +130,39 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
+
+## Envfile
+
+`loadEnvConfig(dir, ...)` automatically reads `Envfile` in the project directory
+(`Envspec` and `Dotenvspec` remain fallback aliases). It uses the shared
+`@dotenvx/primitives` policy engine after merging Next's selected dotenv layers
+and existing environment values.
+
+```ruby
+strict true
+
+env "DATABASE_URL", type: "url"
+env "PORT", type: "port", encrypted: false, redacted: false
+```
+
+Declarations are required, encrypted, and redacted by default. Required values,
+types, enums, ranges, and encrypted origins follow the same rules as dotenvx
+`run` and `check`. File blocks apply to the selected Next environment's paths;
+they do not add files to the load order. Plaintext shell overrides of encrypted
+file values do not count as encrypted sources. Private keys are read from the
+project's `.env.keys` and each selected file's `.keys` companion, plus the existing
+environment.
+
+Validation warns through the supplied logger's `error` method by default.
+`strict true`, at the root or in an applicable file block, throws before new values
+are injected. Invalid syntax and active proxy declarations always throw. This
+synchronous loader cannot start a proxy; use `dotenvx run -- next ...` for proxy
+policies. Diagnostics contain variable names and rules, never resolved values.
+Application logging and returned values are not masked.
+
+Envfile is re-read on cache hits, so policy edits, removal, and malformed
+replacements take effect without restarting. Dotenv content changes still use
+Next's `forceReload` mechanism. Projects without a policy retain their normal
+file selection and shell precedence.
+
+Run `npm test` and `npm run build` to verify the integration.
