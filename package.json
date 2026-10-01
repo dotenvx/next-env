@@ -24,7 +24,7 @@
     "test": "node --test tests/*.test.cjs"
   },
   "devDependencies": {
-    "@dotenvx/primitives": "git+https://github.com/dotenvx/primitives.git#de8a22a88f8209673a6ade34efedbddc98af80b1",
+    "@dotenvx/primitives": "git+https://github.com/dotenvx/primitives.git#8577b41fe437f24eee91f285710e1b5ec4704167",
     "esbuild": "^0.28.1"
   }
 }
