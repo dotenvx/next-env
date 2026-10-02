@@ -1,6 +1,7 @@
 const fs = require('fs')
 const path = require('path')
-const { envfile } = require('@dotenvx/primitives')
+const { parseenvfile, check } = require('@dotenvx/primitives')
+const encryptedSources = require('./encryptedSources.cjs')
 
 // Discovery belongs to the loader; all language semantics live in primitives.
 function readPolicy (dir, files) {
@@ -15,17 +16,12 @@ function readPolicy (dir, files) {
     }
     let schema
     try {
-      schema = envfile.resolve(envfile.parse(source), {
+      schema = parseenvfile(source, {
         filepath,
         envFiles: files.map(file => path.resolve(dir || '.', file))
       })
     } catch (error) {
       error.message = `${filepath}${error.location ? `:${error.location.start.line}:${error.location.start.column}` : ''}: ${error.message}`
-      throw error
-    }
-    if (schema.proxyRules.size > 0) {
-      const error = new Error('Envfile proxy is not supported by synchronous loadEnvConfig(). Use dotenvx run -- yourcommand.')
-      error.code = 'UNSUPPORTED_ENVFILE_PROXY'
       throw error
     }
     return { schema, signature: JSON.stringify([filepath, source, files]) }
@@ -34,9 +30,9 @@ function readPolicy (dir, files) {
 }
 
 function validatePolicy (schema, values, rows, log) {
-  const diagnostics = envfile.check(schema, values, {
+  const diagnostics = check(schema, values, {
     loadedKeys: new Set(rows.flatMap(row => [...Object.keys(row.injected), ...Object.keys(row.existed)])),
-    encryptedKeys: envfile.encryptedSources(rows)
+    encryptedKeys: encryptedSources(rows)
   })
   if (diagnostics.length === 0) return
   const error = new Error(`[INVALID_ENV] ${diagnostics.map(item => item.message).join('; ')}`)

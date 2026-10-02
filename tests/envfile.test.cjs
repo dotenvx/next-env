@@ -94,10 +94,10 @@ test('file blocks apply to selected environment and test skips .env.local', t =>
   assert.equal(f.load().parsedEnv.PORT, '3000')
 })
 
-test('rejects active proxy policies before loading but accepts inactive ones', t => {
+test('removed proxy syntax fails before loading even in an inactive block', t => {
   const f = fixture(t, { Envfile: 'file ".env.production" do\n env "TOKEN", proxy: { domain: "api.example.com" }\nend', '.env': 'PORT=3000' })
-  f.load()
-  assert.throws(() => f.load(false), { code: 'UNSUPPORTED_ENVFILE_PROXY' })
+  assert.throws(() => f.load(), { code: 'MALFORMED_ENVSPEC' })
+  assert.equal(process.env.PORT, undefined)
 })
 
 test('malformed policy and dangling symlink never silently disable validation', t => {

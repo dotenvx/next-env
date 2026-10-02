@@ -155,10 +155,9 @@ environment.
 
 Validation warns through the supplied logger's `error` method by default.
 `strict true`, at the root or in an applicable file block, throws before new values
-are injected. Invalid syntax and active proxy declarations always throw. This
-synchronous loader cannot start a proxy; use `dotenvx run -- next ...` for proxy
-policies. Diagnostics contain variable names and rules, never resolved values.
-Application logging and returned values are not masked.
+are injected. Invalid syntax always throws. Diagnostics contain variable names
+and rules, never resolved values. Application logging and returned values are
+not masked.
 
 Envfile is re-read on cache hits, so policy edits, removal, and malformed
 replacements take effect without restarting. Dotenv content changes still use
