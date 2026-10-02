@@ -63,7 +63,7 @@ test('checks policy edits, malformed replacements, and deletion on cache hits', 
   fs.writeFileSync(path.join(f.dir, 'Envfile'), 'strict true\nenv "PORT", encrypted: false, type: "port", max: 100')
   assert.throws(() => f.load(), { code: 'INVALID_ENV' })
   fs.writeFileSync(path.join(f.dir, 'Envfile'), 'system "oops"')
-  assert.throws(() => f.load(), { code: 'MALFORMED_ENVSPEC' })
+  assert.throws(() => f.load(), { code: 'MALFORMED_ENVFILE' })
   fs.unlinkSync(path.join(f.dir, 'Envfile'))
   assert.equal(f.load().combinedEnv.PORT, '3000')
 })
@@ -96,13 +96,13 @@ test('file blocks apply to selected environment and test skips .env.local', t =>
 
 test('removed proxy syntax fails before loading even in an inactive block', t => {
   const f = fixture(t, { Envfile: 'file ".env.production" do\n env "TOKEN", proxy: { domain: "api.example.com" }\nend', '.env': 'PORT=3000' })
-  assert.throws(() => f.load(), { code: 'MALFORMED_ENVSPEC' })
+  assert.throws(() => f.load(), { code: 'MALFORMED_ENVFILE' })
   assert.equal(process.env.PORT, undefined)
 })
 
 test('malformed policy and dangling symlink never silently disable validation', t => {
   const f = fixture(t, { Envfile: 'env "PORT", unknown: true', '.env': 'PORT=3000' })
-  assert.throws(() => f.load(), { code: 'MALFORMED_ENVSPEC' })
+  assert.throws(() => f.load(), { code: 'MALFORMED_ENVFILE' })
   assert.equal(process.env.PORT, undefined)
   fs.unlinkSync(path.join(f.dir, 'Envfile'))
   fs.symlinkSync(path.join(f.dir, 'missing'), path.join(f.dir, 'Envfile'))
