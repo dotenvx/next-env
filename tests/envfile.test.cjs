@@ -116,7 +116,6 @@ test('force reload validates new dotenv contents with unchanged policy', t => {
   assert.throws(() => f.load(true, true), { code: 'INVALID_ENV' })
 })
 
-
 test('encrypted origins reflect actual final injections, not skipped parser results', t => {
   const kp = keypair()
   const cipher = encrypt(kp.publicKey, 'secret')

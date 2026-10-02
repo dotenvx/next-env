@@ -34,7 +34,7 @@ function readPolicy (dir, files) {
 }
 
 function validatePolicy (schema, values, rows, log) {
-  const diagnostics = envfile.validate(schema, values, {
+  const diagnostics = envfile.check(schema, values, {
     loadedKeys: new Set(rows.flatMap(row => [...Object.keys(row.injected), ...Object.keys(row.existed)])),
     encryptedKeys: envfile.encryptedSources(rows)
   })
