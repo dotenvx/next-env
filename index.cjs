@@ -1,6 +1,7 @@
 const fs = require('fs')
 const path = require('path')
 const { parseSync, policy, check } = require('@dotenvx/primitives')
+const redactProcessOutput = require('./redactProcessOutput.cjs')
 
 let initialEnv
 let combinedEnv
@@ -9,7 +10,7 @@ let cachedLoadedEnvFiles = []
 let previousLoadedEnvFiles = []
 let cachedSelectedFiles = []
 
-function validateEnvfile (dir, files, env, log) {
+function validateEnvfile (dir, files, env, log, loadedEnvFiles = []) {
   const filepath = path.resolve(dir || '.', 'Envfile')
   let source
   try {
@@ -21,7 +22,14 @@ function validateEnvfile (dir, files, env, log) {
   }
 
   const selected = files.map(file => path.relative(path.dirname(filepath), path.resolve(dir || '.', file))).join(',')
-  const { errors } = check(policy(source, selected), env)
+  const schema = policy(source, selected)
+  const { errors } = check(schema, env)
+  // Match config(): protect resolved file values (including shell overrides) and
+  // declared shell-only values, without treating unrelated shell variables as secrets.
+  const keys = new Set([...Object.keys(schema.keys), ...loadedEnvFiles.flatMap(file => Object.keys(file.env || {}))])
+  redactProcessOutput([...keys]
+    .filter(key => schema.keys[key]?.stdio.redacted !== false)
+    .map(key => env[key]))
   if (!errors.length) return
 
   const error = new Error(`[INVALID_ENV] ${errors.map(item => item.message).join('; ')}`)
@@ -75,7 +83,7 @@ function processEnv (
     !forceReload &&
     (process.env.__NEXT_PROCESSED_ENV || loadedEnvFiles.length === 0)
   ) {
-    validateEnvfile(dir, selectedFiles, process.env, log)
+    validateEnvfile(dir, selectedFiles, process.env, log, loadedEnvFiles)
     return [process.env]
   }
 
@@ -114,7 +122,7 @@ function processEnv (
     }
   }
 
-  validateEnvfile(dir, selectedFiles, { ...process.env, ...parsed }, log)
+  validateEnvfile(dir, selectedFiles, { ...process.env, ...parsed }, log, loadedEnvFiles)
   process.env.__NEXT_PROCESSED_ENV = 'true'
   return [Object.assign(process.env, parsed), parsed]
 }
@@ -137,7 +145,7 @@ function loadEnvConfig (
   }
 
   if (combinedEnv && !forceReload) {
-    validateEnvfile(dir, cachedSelectedFiles, combinedEnv, log)
+    validateEnvfile(dir, cachedSelectedFiles, combinedEnv, log, cachedLoadedEnvFiles)
     return {
       combinedEnv,
       parsedEnv,
