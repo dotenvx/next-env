@@ -24,6 +24,20 @@ npm run build
 ```
 
 
+## Envfile validation
+
+If the project directory contains an `Envfile`, the loader uses its rules to
+validate the final environment, including shell overrides and decrypted values.
+File blocks follow Next.js's active development, production, or test file order;
+Envfile profiles do not change which files Next.js loads. Rules for active files
+apply even when those files are absent, so shell-only environments are validated.
+
+Non-strict violations are logged without printing environment values. A violation
+under `strict true` at the document or active file-block level throws before loaded values are
+injected. Invalid or unreadable Envfiles also throw. Cached loads revalidate the
+current environment and Envfile; use Next.js's `forceReload` to reread env files.
+Projects without an Envfile retain the existing loading behavior.
+
 ## Third Party Notices
 
 This package bundles portions of `@dotenvx/primitives`, which bundles portions of the following MIT-licensed packages:
