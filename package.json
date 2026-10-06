@@ -1,6 +1,6 @@
 {
   "name": "@dotenvx/next-env",
-  "version": "2.2.5",
+  "version": "2.2.6",
   "description": "dotenvx drop-in replacement for @next/env",
   "license": "BSD-3-Clause",
   "repository": {
@@ -18,12 +18,12 @@
     "access": "public"
   },
   "scripts": {
-    "build": "esbuild index.cjs --bundle --platform=node --format=cjs --target=node16 --outfile=dist/index.cjs --legal-comments=none --minify",
+    "build": "node -e \"if (typeof require('@dotenvx/primitives').injectsummary !== 'function') throw new Error('Missing primitives injectsummary: run npm install')\" && esbuild index.cjs --bundle --platform=node --format=cjs --target=node16 --outfile=dist/index.cjs --legal-comments=none --minify",
     "prepack": "npm run build",
     "prepublishOnly": "npm pack --dry-run"
   },
   "devDependencies": {
-    "@dotenvx/primitives": "3.1.0",
+    "@dotenvx/primitives": "3.2.0",
     "esbuild": "^0.28.1"
   }
 }
