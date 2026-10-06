@@ -1,6 +1,6 @@
 const fs = require('fs')
 const path = require('path')
-const { parseSync, policy, check } = require('@dotenvx/primitives')
+const { parseSync, policy, check, injectsummary } = require('@dotenvx/primitives')
 const redactProcessOutput = require('./redactProcessOutput.cjs')
 
 let initialEnv
@@ -89,6 +89,7 @@ function processEnv (
 
   const origEnv = Object.assign({}, initialEnv)
   const parsed = {}
+  let failed = false
 
   for (const envFile of loadedEnvFiles) {
     try {
@@ -115,6 +116,7 @@ function processEnv (
 
       envFile.env = result.parsed || {}
     } catch (err) {
+      failed = true
       log.error(
         `Failed to load env from ${path.join(dir || '', envFile.path)}`,
         err
@@ -124,7 +126,12 @@ function processEnv (
 
   validateEnvfile(dir, selectedFiles, { ...process.env, ...parsed }, log, loadedEnvFiles)
   process.env.__NEXT_PROCESSED_ENV = 'true'
-  return [Object.assign(process.env, parsed), parsed]
+  Object.assign(process.env, parsed)
+
+  if (!failed && loadedEnvFiles.length && typeof log.info === 'function') {
+    log.info(injectsummary(Object.keys(parsed).length, loadedEnvFiles.map(file => file.path)))
+  }
+  return [process.env, parsed]
 }
 
 function resetEnv () {
