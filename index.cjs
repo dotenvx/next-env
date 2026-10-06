@@ -95,6 +95,11 @@ function processEnv (
     try {
       const result = parseSync(envFile.contents)
 
+      for (const error of result.errors || []) {
+        failed = true
+        log.error(`☠ ${error.messageWithHelp || error.message} (${envFile.path})`)
+      }
+
       if (
         result.parsed &&
         !previousLoadedEnvFiles.some(
