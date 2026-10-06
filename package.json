@@ -1,6 +1,6 @@
 {
   "name": "@dotenvx/next-env",
-  "version": "2.3.1",
+  "version": "2.4.0",
   "description": "dotenvx drop-in replacement for @next/env",
   "license": "BSD-3-Clause",
   "repository": {
