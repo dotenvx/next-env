@@ -1,6 +1,7 @@
 const fs = require('fs')
 const path = require('path')
 const { parseSync, policy, check, injectsummary } = require('@dotenvx/primitives')
+const { provider } = require('@dotenvx/providers')
 const redactProcessOutput = require('./redactProcessOutput.cjs')
 
 let initialEnv
@@ -93,7 +94,10 @@ function processEnv (
 
   for (const envFile of loadedEnvFiles) {
     try {
-      const result = parseSync(envFile.contents)
+      const result = parseSync(envFile.contents, {
+        fk: path.resolve(dir || '.', '.env.keys'),
+        provider: provider({ cwd: dir || '.' }).getSync
+      })
 
       for (const error of result.errors || []) {
         failed = true
