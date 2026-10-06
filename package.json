@@ -18,7 +18,7 @@
     "access": "public"
   },
   "scripts": {
-    "build": "node -e \"if (typeof require('@dotenvx/primitives').injectsummary !== 'function') throw new Error('Missing primitives injectsummary: run npm install')\" && esbuild index.cjs --bundle --platform=node --format=cjs --target=node16 --outfile=dist/index.cjs --legal-comments=none --minify",
+    "build": "esbuild index.cjs --bundle --platform=node --format=cjs --target=node16 --outfile=dist/index.cjs --legal-comments=none --minify",
     "prepack": "npm run build",
     "prepublishOnly": "npm pack --dry-run"
   },
