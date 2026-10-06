@@ -18,12 +18,12 @@
     "access": "public"
   },
   "scripts": {
-    "build": "esbuild index.cjs --bundle --platform=node --format=cjs --target=node16 --outfile=dist/index.cjs --legal-comments=none --minify",
+    "build": "node build.cjs",
     "prepack": "npm run build",
     "prepublishOnly": "npm pack --dry-run"
   },
   "devDependencies": {
-    "@dotenvx/providers": "0.2.0",
+    "@dotenvx/providers": "0.3.1",
     "@dotenvx/primitives": "3.2.0",
     "esbuild": "^0.28.1"
   }
