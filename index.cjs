@@ -1,8 +1,10 @@
 const fs = require('fs')
 const path = require('path')
 const { parseSync, policy, check, injectsummary } = require('@dotenvx/primitives')
-const { provider } = require('@dotenvx/providers')
+const provider = require('./provider.cjs')
 const redactProcessOutput = require('./redactProcessOutput.cjs')
+const amber = require('./amber.cjs')
+const injectSpinner = require('./injectSpinner.cjs')
 
 let initialEnv
 let combinedEnv
@@ -92,6 +94,11 @@ function processEnv (
   const parsed = {}
   let failed = false
 
+  // Armor's worker owns animated terminal output while this thread is blocked.
+  if (loadedEnvFiles.length && typeof log.info === 'function' && !injectSpinner.enabled()) {
+    log.info('◇ injecting')
+  }
+
   for (const envFile of loadedEnvFiles) {
     try {
       const result = parseSync(envFile.contents, {
@@ -138,7 +145,7 @@ function processEnv (
   Object.assign(process.env, parsed)
 
   if (!failed && loadedEnvFiles.length && typeof log.info === 'function') {
-    log.info(injectsummary(Object.keys(parsed).length, loadedEnvFiles.map(file => file.path)))
+    log.info(amber(injectsummary(Object.keys(parsed).length, loadedEnvFiles.map(file => file.path))))
   }
   return [process.env, parsed]
 }
