@@ -16,20 +16,16 @@ function progress (operation, text) {
 }
 
 module.exports = function withProgress (options = {}) {
-  const labels = {
-    native: process.platform === 'darwin' ? 'Keychain' : 'system key store',
-    onepassword: '1Password',
-    bitwarden: 'Bitwarden'
-  }
+  const fallbackProviders = new Set(['native', 'onepassword', 'bitwarden'])
   // The shared package owns precedence; this adapter only renders progress.
   // Armor's own worker handles its spinner and approval prompts.
   return provider({
     ...options,
     onLookup (name) {
-      if (labels[name]) progress('start', `injecting (${labels[name]})`)
+      if (fallbackProviders.has(name)) progress('start', 'injecting')
     },
     onLookupEnd (name) {
-      if (labels[name]) progress('stop')
+      if (fallbackProviders.has(name)) progress('stop')
     }
   })
 }

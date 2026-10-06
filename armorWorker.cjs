@@ -7,7 +7,7 @@ runAsWorker(async (operation, options, args) => {
   const spinner = injectSpinner()
   try {
     if (!['get', 'decrypt'].includes(operation)) throw new Error('invalid Armor operation')
-    spinner.start('injecting (Armor)')
+    spinner.start('injecting')
     const provider = armor({
       ...options,
       onApprovalRequired ({ approvalUri }) {
