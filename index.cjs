@@ -1,6 +1,6 @@
 const fs = require('fs')
 const path = require('path')
-const { parseSync, policy, check, injectsummary } = require('@dotenvx/primitives')
+const { parseSync, policy, check, injectsummary, publickeys, keyringSync } = require('@dotenvx/primitives')
 const provider = require('./provider.cjs')
 const redactProcessOutput = require('./redactProcessOutput.cjs')
 const amber = require('./amber.cjs')
@@ -93,6 +93,7 @@ function processEnv (
   const origEnv = Object.assign({}, initialEnv)
   const parsed = {}
   let failed = false
+  const summaryRows = []
 
   // Armor's worker owns animated terminal output while this thread is blocked.
   if (loadedEnvFiles.length && typeof log.info === 'function' && !injectSpinner.enabled()) {
@@ -101,10 +102,29 @@ function processEnv (
 
   for (const envFile of loadedEnvFiles) {
     try {
-      const result = parseSync(envFile.contents, {
+      const publicKeys = publickeys(envFile.contents)
+      const keySources = {}
+      const environment = keyringSync({ processEnv: process.env, fk: [], provider: null })
+      for (const key of publicKeys) {
+        if (environment[key]) keySources[key] = 'environment'
+      }
+      let source
+      const keys = provider({
+        cwd: dir || '.',
         fk: path.resolve(dir || '.', '.env.keys'),
-        provider: provider({ cwd: dir || '.' }).getSync
+        onLookup (name) { source = name }
       })
+      const result = parseSync(envFile.contents, {
+        // Let the shared provider resolve file keys so their source is recorded.
+        // Preserve legacy discovery for files without a declared public key.
+        fk: publicKeys.length ? [] : path.resolve(dir || '.', '.env.keys'),
+        provider (publicKey) {
+          const ring = keys.getSync(publicKey)
+          if (ring[publicKey]) keySources[publicKey] = source
+          return ring
+        }
+      })
+      summaryRows.push({ filepath: envFile.path, publicKeys, keySources })
 
       for (const error of result.errors || []) {
         failed = true
@@ -145,7 +165,7 @@ function processEnv (
   Object.assign(process.env, parsed)
 
   if (!failed && loadedEnvFiles.length && typeof log.info === 'function') {
-    log.info(amber(injectsummary(Object.keys(parsed).length, loadedEnvFiles.map(file => file.path))))
+    log.info(amber(injectsummary(Object.keys(parsed).length, summaryRows)))
   }
   return [process.env, parsed]
 }

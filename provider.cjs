@@ -22,10 +22,12 @@ module.exports = function withProgress (options = {}) {
   return provider({
     ...options,
     onLookup (name) {
+      if (options.onLookup) options.onLookup(name)
       if (fallbackProviders.has(name)) progress('start', 'injecting')
     },
     onLookupEnd (name) {
       if (fallbackProviders.has(name)) progress('stop')
+      if (options.onLookupEnd) options.onLookupEnd(name)
     }
   })
 }
