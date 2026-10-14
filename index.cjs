@@ -4,7 +4,6 @@ const { parseSync, policy, check, injectsummary, publickeys, keyringSync } = req
 const provider = require('./provider.cjs')
 const redactProcessOutput = require('./redactProcessOutput.cjs')
 const amber = require('./amber.cjs')
-const injectSpinner = require('./injectSpinner.cjs')
 
 let initialEnv
 let combinedEnv
@@ -94,11 +93,6 @@ function processEnv (
   const parsed = {}
   let failed = false
   const summaryRows = []
-
-  // Armor's worker owns animated terminal output while this thread is blocked.
-  if (loadedEnvFiles.length && typeof log.info === 'function' && !injectSpinner.enabled()) {
-    log.info('◇ injecting')
-  }
 
   for (const envFile of loadedEnvFiles) {
     try {
