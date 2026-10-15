@@ -106,7 +106,12 @@ function processEnv (
       const keys = provider({
         cwd: dir || '.',
         fk: path.resolve(dir || '.', '.env.keys'),
-        onLookup (name) { source = name }
+        onLookup (name) { source = name },
+        onArmorError (error) {
+          if (error.code !== 'ARMOR_UNREACHABLE') throw error
+          failed = true
+          log.error(`☠ ${error.messageWithHelp || error.message} (${envFile.path})`)
+        }
       })
       const result = parseSync(envFile.contents, {
         // Let the shared provider resolve file keys so their source is recorded.
