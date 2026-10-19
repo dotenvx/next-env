@@ -2,6 +2,7 @@ const fs = require('fs')
 const path = require('path')
 const { parseSync, policy, check, injectsummary, publickeys, keyringSync } = require('@dotenvx/primitives')
 const provider = require('./provider.cjs')
+const { armor } = require('@dotenvx/providers')
 const redactProcessOutput = require('./redactProcessOutput.cjs')
 const amber = require('./amber.cjs')
 
@@ -108,24 +109,39 @@ function processEnv (
         fk: path.resolve(dir || '.', '.env.keys'),
         onLookup (name) { source = name }
       })
-      const result = parseSync(envFile.contents, {
+      let result
+      try {
+        result = parseSync(envFile.contents, {
         // Let the shared provider resolve file keys so their source is recorded.
         // Preserve legacy discovery for files without a declared public key.
-        fk: publicKeys.length ? [] : path.resolve(dir || '.', '.env.keys'),
-        provider (publicKey) {
-          try {
-            const ring = keys.getSync(publicKey)
-            if (ring[publicKey]) keySources[publicKey] = source
-            return ring
-          } catch (error) {
-            failed = true
-            const message = error.messageWithHelp || error.message || 'private key lookup failed'
-            const prefix = error.code && !message.startsWith(`[${error.code}]`) ? `[${error.code}] ` : ''
-            log.error(`☠ ${prefix}${message} (${envFile.path})`)
-            return {}
+          fk: publicKeys.length ? [] : path.resolve(dir || '.', '.env.keys'),
+          provider (publicKey) {
+            try {
+              const ring = keys.getSync(publicKey)
+              if (ring[publicKey]) keySources[publicKey] = source
+              return ring
+            } catch (error) {
+              if (error.code === 'SERVER_SIDE_DECRYPTION_REQUIRED') throw error
+              failed = true
+              const message = error.messageWithHelp || error.message || 'private key lookup failed'
+              const prefix = error.code && !message.startsWith(`[${error.code}]`) ? `[${error.code}] ` : ''
+              log.error(`☠ ${prefix}${message} (${envFile.path})`)
+              return {}
+            }
           }
+        })
+      } catch (error) {
+        if (error.code !== 'SERVER_SIDE_DECRYPTION_REQUIRED') throw error
+        const meta = error.meta || {}
+        try {
+          const decrypted = armor().decryptSync(envFile.contents, { publicKey: meta.public_key, grantToken: meta.grant_token })
+          result = parseSync(decrypted.src, { provider: null })
+          keySources[meta.public_key] = 'armor'
+        } catch (decryptError) {
+          result = parseSync(envFile.contents, { provider: null })
+          result.errors = [decryptError, ...(result.errors || [])]
         }
-      })
+      }
       summaryRows.push({ filepath: envFile.path, publicKeys, keySources })
 
       for (const error of result.errors || []) {
