@@ -1,6 +1,5 @@
-const fs = require('node:fs')
 const { runAsWorker } = require('@dotenvx/tooling')
-const { armor } = require('@dotenvx/providers')
+const { armor, approvalRequired } = require('@dotenvx/providers')
 const injectSpinner = require('./injectSpinner.cjs')
 
 runAsWorker(async (operation, options, args) => {
@@ -10,15 +9,9 @@ runAsWorker(async (operation, options, args) => {
     spinner.start('injecting')
     const provider = armor({
       ...options,
-      onApprovalRequired ({ approvalUri }) {
+      onApprovalRequired (info) {
         spinner.stop()
-        // Next's main thread is blocked in getSync, so write directly from the worker.
-        fs.writeSync(2, `Armor approval required: ${approvalUri}\n`)
-        if (injectSpinner.enabled()) {
-          spinner.start('waiting for approval')
-        } else {
-          fs.writeSync(2, 'Waiting for approval…\n')
-        }
+        approvalRequired(info)
       }
     })
     return { value: await provider[operation](...args) }
