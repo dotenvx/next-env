@@ -1,9 +1,8 @@
 const fs = require('fs')
 const path = require('path')
-const { parseSync, policy, check, injectsummary, publickeys, keyringSync } = require('@dotenvx/primitives')
+const { parseSync, injectsummary, publickeys, keyringSync } = require('@dotenvx/primitives')
 const provider = require('./provider.cjs')
 const { armor } = require('@dotenvx/providers')
-const redactProcessOutput = require('./redactProcessOutput.cjs')
 const amber = require('./amber.cjs')
 
 let initialEnv
@@ -11,36 +10,6 @@ let combinedEnv
 let parsedEnv
 let cachedLoadedEnvFiles = []
 let previousLoadedEnvFiles = []
-let cachedSelectedFiles = []
-
-function validateEnvfile (dir, files, env, log, loadedEnvFiles = []) {
-  const filepath = path.resolve(dir || '.', 'Envfile')
-  let source
-  try {
-    source = fs.readFileSync(filepath, 'utf8')
-  } catch (error) {
-    if (error.code !== 'ENOENT') throw error
-    if (fs.lstatSync(filepath, { throwIfNoEntry: false })) throw new Error(`Cannot read Envfile: ${filepath}`)
-    return
-  }
-
-  const selected = files.map(file => path.relative(path.dirname(filepath), path.resolve(dir || '.', file))).join(',')
-  const schema = policy(source, selected)
-  const { errors } = check(schema, env)
-  // Match config(): protect resolved file values (including shell overrides) and
-  // declared shell-only values, without treating unrelated shell variables as secrets.
-  const keys = new Set([...Object.keys(schema.keys), ...loadedEnvFiles.flatMap(file => Object.keys(file.env || {}))])
-  redactProcessOutput([...keys]
-    .filter(key => schema.keys[key]?.stdio.redacted !== false)
-    .map(key => env[key]))
-  if (!errors.length) return
-
-  const error = new Error(`[INVALID_ENV] ${errors.map(item => item.message).join('; ')}`)
-  error.code = 'INVALID_ENV'
-  error.diagnostics = errors
-  if (errors.some(item => item.strict)) throw error
-  log.error(error.message)
-}
 
 function updateInitialEnv (newEnv) {
   if (!initialEnv) {
@@ -75,8 +44,7 @@ function processEnv (
   dir,
   log = console,
   forceReload = false,
-  onReload,
-  selectedFiles = loadedEnvFiles.map(file => file.path)
+  onReload
 ) {
   if (!initialEnv) {
     initialEnv = Object.assign({}, process.env)
@@ -86,7 +54,6 @@ function processEnv (
     !forceReload &&
     (process.env.__NEXT_PROCESSED_ENV || loadedEnvFiles.length === 0)
   ) {
-    validateEnvfile(dir, selectedFiles, process.env, log, loadedEnvFiles)
     return [process.env]
   }
 
@@ -178,7 +145,6 @@ function processEnv (
     }
   }
 
-  validateEnvfile(dir, selectedFiles, { ...process.env, ...parsed }, log, loadedEnvFiles)
   process.env.__NEXT_PROCESSED_ENV = 'true'
   Object.assign(process.env, parsed)
 
@@ -206,7 +172,6 @@ function loadEnvConfig (
   }
 
   if (combinedEnv && !forceReload) {
-    validateEnvfile(dir, cachedSelectedFiles, combinedEnv, log, cachedLoadedEnvFiles)
     return {
       combinedEnv,
       parsedEnv,
@@ -260,11 +225,9 @@ function loadEnvConfig (
     dir,
     log,
     forceReload,
-    onReload,
-    dotenvFiles
+    onReload
   )
 
-  cachedSelectedFiles = dotenvFiles
   combinedEnv = result[0]
   parsedEnv = result[1]
 
