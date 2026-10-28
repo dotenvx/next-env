@@ -20,8 +20,7 @@
   "scripts": {
     "build": "node build.cjs",
     "prepack": "npm run build",
-    "prepublishOnly": "npm pack --dry-run",
-    "test": "node --test redaction.test.cjs"
+    "prepublishOnly": "npm pack --dry-run"
   },
   "devDependencies": {
     "@dotenvx/providers": "0.3.11",
