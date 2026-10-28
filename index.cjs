@@ -4,6 +4,7 @@ const { parseSync, injectsummary, publickeys, keyringSync, policy, check } = req
 const provider = require('./provider.cjs')
 const { armor } = require('@dotenvx/providers')
 const amber = require('./amber.cjs')
+const { applyRedaction, refreshRedaction } = require('./redaction.cjs')
 
 let initialEnv
 let combinedEnv
@@ -12,6 +13,7 @@ let cachedLoadedEnvFiles = []
 let previousLoadedEnvFiles = []
 
 function updateInitialEnv (newEnv) {
+  refreshRedaction()
   if (!initialEnv) {
     return
   }
@@ -47,6 +49,7 @@ function processEnv (
   onReload,
   onResolved
 ) {
+  refreshRedaction()
   if (!initialEnv) {
     initialEnv = Object.assign({}, process.env)
   }
@@ -163,7 +166,7 @@ function resetEnv () {
   }
 }
 
-function checkDotenvxfile (dir, files, env, log) {
+function checkDotenvxfile (dir, files, env, log, loadedKeys) {
   let source
   try {
     source = fs.readFileSync(path.join(dir, 'Dotenvxfile'), 'utf8')
@@ -174,7 +177,9 @@ function checkDotenvxfile (dir, files, env, log) {
 
   let errors
   try {
-    errors = check(policy(source, files.join(',')), env).errors
+    const resolved = policy(source, files.join(','))
+    applyRedaction(resolved, env, loadedKeys)
+    errors = check(resolved, env).errors
   } catch (error) {
     log.error(`☠ ${error.messageWithHelp || error.message}`)
     return
@@ -195,6 +200,7 @@ function loadEnvConfig (
   forceReload = false,
   onReload
 ) {
+  refreshRedaction()
   if (!initialEnv) {
     initialEnv = Object.assign({}, process.env)
   }
@@ -254,7 +260,7 @@ function loadEnvConfig (
     log,
     forceReload,
     onReload,
-    env => checkDotenvxfile(dir, dotenvFiles, env, log)
+    env => checkDotenvxfile(dir, dotenvFiles, env, log, cachedLoadedEnvFiles.flatMap(file => Object.keys(file.env)))
   )
 
   combinedEnv = result[0]
