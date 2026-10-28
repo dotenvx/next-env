@@ -1,6 +1,6 @@
 const fs = require('fs')
 const path = require('path')
-const { parseSync, injectsummary, publickeys, keyringSync } = require('@dotenvx/primitives')
+const { parseSync, injectsummary, publickeys, keyringSync, policy, check } = require('@dotenvx/primitives')
 const provider = require('./provider.cjs')
 const { armor } = require('@dotenvx/providers')
 const amber = require('./amber.cjs')
@@ -44,7 +44,8 @@ function processEnv (
   dir,
   log = console,
   forceReload = false,
-  onReload
+  onReload,
+  onResolved
 ) {
   if (!initialEnv) {
     initialEnv = Object.assign({}, process.env)
@@ -54,6 +55,7 @@ function processEnv (
     !forceReload &&
     (process.env.__NEXT_PROCESSED_ENV || loadedEnvFiles.length === 0)
   ) {
+    if (onResolved) onResolved(process.env)
     return [process.env]
   }
 
@@ -145,8 +147,9 @@ function processEnv (
     }
   }
 
-  process.env.__NEXT_PROCESSED_ENV = 'true'
   Object.assign(process.env, parsed)
+  if (onResolved) onResolved(process.env)
+  process.env.__NEXT_PROCESSED_ENV = 'true'
 
   if (!failed && loadedEnvFiles.length && typeof log.info === 'function') {
     log.info(amber(injectsummary(Object.keys(parsed).length, summaryRows)))
@@ -157,6 +160,31 @@ function processEnv (
 function resetEnv () {
   if (initialEnv) {
     replaceProcessEnv(initialEnv)
+  }
+}
+
+function checkDotenvxfile (dir, files, env, log) {
+  let source
+  try {
+    source = fs.readFileSync(path.join(dir, 'Dotenvxfile'), 'utf8')
+  } catch (error) {
+    if (error.code !== 'ENOENT') log.error('Failed to read Dotenvxfile', error)
+    return
+  }
+
+  let errors
+  try {
+    errors = check(policy(source, files.join(',')), env).errors
+  } catch (error) {
+    log.error(`☠ ${error.messageWithHelp || error.message}`)
+    return
+  }
+
+  for (const error of errors) {
+    log.error(`☠ [${error.code}] ${error.message}`)
+    if (error.strict) {
+      throw new Error(`[${error.code}] ${error.message}`, { cause: error })
+    }
   }
 }
 
@@ -225,7 +253,8 @@ function loadEnvConfig (
     dir,
     log,
     forceReload,
-    onReload
+    onReload,
+    env => checkDotenvxfile(dir, dotenvFiles, env, log)
   )
 
   combinedEnv = result[0]
