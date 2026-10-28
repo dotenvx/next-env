@@ -23,7 +23,7 @@
     "prepublishOnly": "npm pack --dry-run"
   },
   "devDependencies": {
-    "@dotenvx/providers": "0.3.11",
+    "@dotenvx/providers": "0.3.13",
     "@dotenvx/primitives": "4.3.0",
     "esbuild": "^0.28.1"
   }
