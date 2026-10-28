@@ -163,7 +163,7 @@ function resetEnv () {
   }
 }
 
-function checkDotenvxFile (dir, files, env, log) {
+function checkDotenvxfile (dir, files, env, log) {
   let source
   try {
     source = fs.readFileSync(path.join(dir, 'Dotenvxfile'), 'utf8')
@@ -183,7 +183,7 @@ function checkDotenvxFile (dir, files, env, log) {
   for (const error of errors) {
     log.error(`☠ [${error.code}] ${error.message}`)
     if (error.strict) {
-      throw error
+      throw new Error(`[${error.code}] ${error.message}`, { cause: error })
     }
   }
 }
@@ -254,7 +254,7 @@ function loadEnvConfig (
     log,
     forceReload,
     onReload,
-    env => checkDotenvxFile(dir, dotenvFiles, env, log)
+    env => checkDotenvxfile(dir, dotenvFiles, env, log)
   )
 
   combinedEnv = result[0]
