@@ -183,15 +183,7 @@ function checkDotenvxFile (dir, files, env, log) {
   for (const error of errors) {
     log.error(`☠ [${error.code}] ${error.message}`)
     if (error.strict) {
-      const failure = Object.assign(new Error(`[${error.code}] ${error.message}`), {
-        code: error.code,
-        key: error.key,
-        rule: error.rule,
-        strict: error.strict
-      })
-      Object.defineProperty(failure, 'debug', { value: failure.stack })
-      failure.stack = `${failure.name}: ${failure.message}`
-      throw failure
+      throw error
     }
   }
 }
