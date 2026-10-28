@@ -24,7 +24,7 @@
   },
   "devDependencies": {
     "@dotenvx/providers": "0.3.11",
-    "@dotenvx/primitives": "4.2.3",
+    "@dotenvx/primitives": "4.3.0",
     "esbuild": "^0.28.1"
   }
 }
