@@ -15,7 +15,8 @@ const options = {
 }
 
 Promise.all([
-  build({ ...options, entryPoints: ['index.cjs'], outfile: path.join(root, 'dist/index.cjs') }),
+  // Keep throw-site excerpts short when Node reports an uncaught validation error.
+  build({ ...options, minify: false, minifyIdentifiers: true, minifySyntax: true, entryPoints: ['index.cjs'], outfile: path.join(root, 'dist/index.cjs') }),
   build({ ...options, entryPoints: ['armorWorker.cjs'], outfile: path.join(root, 'dist/armorWorker.js') }),
   build({ ...options, entryPoints: ['spinnerWorker.cjs'], outfile: path.join(root, 'dist/spinnerWorker.js') })
 ]).catch(error => {
