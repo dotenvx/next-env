@@ -7,7 +7,7 @@ Use it when you want Next.js to load encrypted dotenvx files during Next's own e
 ```json
 {
   "dependencies": {
-    "@dotenvx/next-env": "^2.0.0",
+    "@dotenvx/next-env": "^2.5.3",
     "next": "^16.0.0"
   },
   "overrides": {
