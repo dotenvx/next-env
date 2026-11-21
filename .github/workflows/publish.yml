@@ -1,0 +1,76 @@
+name: publish
+run-name: Publish next-env ${{ inputs.tag || github.ref_name }}
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing release tag to publish or retry (vX.Y.Z)
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    if: github.event.deleted != true
+    runs-on: ubuntu-24.04
+    environment: release
+    concurrency: next-env-npm-publish
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.tag || github.ref_name }}
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+      - name: Validate and pack the synced release
+        env:
+          RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+        run: |
+          node <<'NODE'
+          const assert = require('node:assert/strict')
+          const fs = require('node:fs')
+          const pkg = require('./package.json')
+          assert.equal(pkg.name, '@dotenvx/next-env')
+          assert.match(pkg.version, /^\d+\.\d+\.\d+$/)
+          assert.equal(process.env.RELEASE_TAG, `v${pkg.version}`)
+          assert.equal(pkg.repository.url, 'git+https://github.com/dotenvx/next-env.git')
+          assert.equal(pkg.repository.directory, undefined)
+          const source = require('./FORGE_SOURCE.json')
+          assert.equal(source.repository, 'https://github.com/dotenvx/forge')
+          assert.equal(source.tag, `next-env-v${pkg.version}`)
+          assert.match(source.commit, /^[0-9a-f]{40}$/)
+          for (const platform of ['darwin-arm64', 'darwin-x64', 'linux-arm64', 'linux-x64', 'win32-x64']) {
+            assert.ok(fs.statSync(`dist/dotenvx-${platform}.node`).size > 0)
+          }
+          NODE
+          npm pack --ignore-scripts --json > "$RUNNER_TEMP/next-env-pack.json"
+          archive=$(node -p 'require(process.argv[1])[0].filename' "$RUNNER_TEMP/next-env-pack.json")
+          echo "NEXT_ENV_ARCHIVE=$archive" >> "$GITHUB_ENV"
+      - name: Test installation of the npm tarball
+        run: |
+          directory=$(mktemp -d)
+          npm install --prefix "$directory" --ignore-scripts --no-audit --no-fund "$PWD/$NEXT_ENV_ARCHIVE"
+          node - "$directory" <<'NODE'
+          const assert = require('node:assert/strict')
+          const fs = require('node:fs')
+          const path = require('node:path')
+          const directory = process.argv[2]
+          const loader = require(path.join(directory, 'node_modules/@dotenvx/next-env'))
+          fs.writeFileSync(path.join(directory, '.env'), 'NEXT_ENV_RELEASE_SMOKE=ready\n')
+          const loaded = loader.loadEnvConfig(directory)
+          assert.equal(loaded.parsedEnv.NEXT_ENV_RELEASE_SMOKE, 'ready')
+          assert.equal(process.env.NEXT_ENV_RELEASE_SMOKE, 'ready')
+          NODE
+      - name: Publish to npm with trusted publishing
+        run: npm publish "$NEXT_ENV_ARCHIVE" --ignore-scripts --access public
