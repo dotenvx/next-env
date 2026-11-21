@@ -1,16 +1,17 @@
 {
   "name": "@dotenvx/next-env",
-  "version": "2.5.6",
+  "version": "3.1.1",
   "description": "dotenvx drop-in replacement for @next/env",
   "license": "BSD-3-Clause",
+  "homepage": "https://dotenvx.com/docs/nextjs/",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/dotenvx/dotenvx.git",
-    "directory": "packages/next-env"
+    "url": "git+https://github.com/dotenvx/next-env.git"
   },
   "main": "dist/index.cjs",
   "files": [
-    "dist/**/*",
+    "dist/index.cjs",
+    "dist/dotenvx-*.node",
     "LICENSE",
     "README.md"
   ],
@@ -18,13 +19,9 @@
     "access": "public"
   },
   "scripts": {
-    "build": "node build.cjs",
-    "prepack": "npm run build",
-    "prepublishOnly": "npm pack --dry-run"
+    "build": "node build.cjs"
   },
   "devDependencies": {
-    "@dotenvx/providers": "0.3.13",
-    "@dotenvx/primitives": "4.3.0",
     "esbuild": "^0.28.1"
   }
 }

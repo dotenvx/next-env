@@ -1,131 +1,105 @@
-# @dotenvx/next-env
+[![dotenvx](https://dotenvx.com/banner.png?v2)](https://dotenvx.com)
 
-`@dotenvx/next-env` is a drop-in replacement for Next.js' `@next/env` package.
+*A secure dotenv*–from the creator of [`dotenv`](https://github.com/motdotla/dotenv).
 
-Use it when you want Next.js to load encrypted dotenvx files during Next's own environment-loading step. This lets decrypted values exist before Next.js evaluates server modules.
+* Encrypt
+* Commit
+* Ship
+
+[Install](https://dotenvx.com/docs/install) · [Quickstart](https://dotenvx.com/docs/nextjs/) · [Dotenvx on GitHub](https://github.com/dotenvx/dotenvx)
+
+## Quickstart
+
+`@dotenvx/next-env` replaces Next.js’ `@next/env` loader. In your existing Next.js app, install it.
+
+```sh
+npm install @dotenvx/next-env@^3.0.0
+```
+
+Add the override to your app’s `package.json`.
 
 ```json
 {
-  "dependencies": {
-    "@dotenvx/next-env": "^2.5.3",
-    "next": "^16.0.0"
-  },
   "overrides": {
-    "@next/env": "npm:@dotenvx/next-env"
+    "@next/env": "npm:@dotenvx/next-env@^3.0.0"
   }
 }
 ```
 
-After installing, run Next.js normally:
+Run `npm install` again to apply the override.
 
-```sh
-npm run dev
-npm run build
+`.env`
+
+```dotenv
+HELLO=World
 ```
 
-## Third Party Notices
+`app/api/hello/route.js`
 
-This package bundles portions of `@dotenvx/primitives`, which bundles portions of the following MIT-licensed packages:
+```js
+export function GET() {
+  return new Response(`Hello ${process.env.HELLO}`)
+}
+```
 
-- `eciesjs`
-- `@ecies/ciphers`
-- `@noble/curves`
-- `@noble/hashes`
-- `@noble/ciphers`
+Run `npm run dev` and open `http://localhost:3000/api/hello` to see `Hello World`.
 
-### eciesjs
+- Prebuilt Node addons are included for macOS arm64/x64, Linux glibc arm64/x64,
+  and Windows x64.
+- Stored key lookup requires a compatible `dotenvx` CLI on `PATH`. Keys in
+  `process.env` and `.env.keys` work without the CLI.
+- Armor Enclave server-side decryption is unavailable in v3.
 
-MIT License
+&nbsp;
 
-Copyright (c) 2019-2026 Weiliang Li
+## Usage
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+*Install* the standalone `dotenvx` CLI on your `PATH`. The only dotenvx npm package your app needs is `@dotenvx/next-env`.
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+```sh
+$ curl -sfS https://dotenvx.sh | sh
+◈ installed (2.38.2:/usr/local/bin/dotenvx)
+```
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+*Encrypt* your secrets in `.env` files. The values become ciphertext and only your private key can unlock them.
 
-### @ecies/ciphers
+```sh
+$ dotenvx encrypt
+◈ encrypted .env (039 BCA) via .env.keys ⛉
+```
 
-MIT License
+*Commit* your encrypted `.env` files with your code. Keep `.env.keys` out of git. The `-f` flag adds the encrypted file when your Next.js project ignores it.
 
-Copyright (c) 2019-2026 Weiliang Li
+```sh
+$ git add -f .env
+$ git commit -m "encrypt .env"
+```
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+*Ship* your code and secrets together. Dotenvx uses your private key to decrypt and inject your secrets just-in-time to your code.
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+```sh
+$ npm run dev
+⟐ injected env (2) from .env (039 BCA) via .env.keys ⛉
+```
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+Set the matching private key, such as `DOTENV_PRIVATE_KEY`, in your deployment environment.
 
-### @noble/curves and @noble/hashes
+&nbsp;
 
-The MIT License (MIT)
+## Design
 
-Copyright (c) 2022 Paul Miller (https://paulmillr.com)
+Three widely used and proven primitives make up Dotenvx's design. Git, .env, and secp256k1.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the “Software”), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+We chose git because it is the best way to deliver digital goods. It is the container ship of the digital world. All code travels on its ships. Why not secrets? Why invent an inferior secrets delivery mechanism when the world class one is right there at your fingertips.
 
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
+We chose .env because it is the open standard for loading secrets into code. It represents environment variables, the core primitive that all secrets end up injected into at runtime of code.
 
-THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE.
+Lastly, we needed to choose an encryption algorithm. Encryption of the values inside the .env file would allow us to place those values with code, leveraging git's distribution advantages while still following the twelve-factor config – by separating the decryption key from the code (environment).
 
-### @noble/ciphers
+It was important that we choose a proven, simple, asymmetric standard with small keys. We chose secp256k1, battle-tested by Bitcoin for more than seventeen years. We made cryptography an opinionated choice so developers wouldn't have to. Encryption just worked.
 
-The MIT License (MIT)
+The result is a system built entirely from primitives, developers already understand, and infrastructure they already use. Secrets can travel with code without becoming part of the code. Git distributes them, .env defines how apps consume them, and secp256k1 keeps their values unreadable. The kicker, all this works by setting a single private key on your infrastructure - no more risky async coordination of secrets, no more centralized downtime risk. Your secrets are always just there with your code, ready to be unlocked at runtime.
 
-Copyright (c) 2022 Paul Miller (https://paulmillr.com)
-Copyright (c) 2016 Thomas Pornin <pornin@bolet.org>
+[Read the whitepaper →](https://dotenvx.com/dotenvx.pdf?v=README)
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the “Software”), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE.
+&nbsp;
