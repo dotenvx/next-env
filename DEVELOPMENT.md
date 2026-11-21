@@ -25,6 +25,22 @@ sync for an identical release is a no-op; retry a failed npm publish by re-runni
 the standalone workflow, or dispatching it with the existing `v<version>` tag.
 An already published npm version is immutable; use a new version for changes.
 
+If a sync failure requires a script fix, push that fix to Forge's `main` and
+retry using the original build run's artifacts:
+
+```sh
+gh workflow run next-env.yml --repo dotenvx/forge --ref main -f run_id=<original-run-id>
+```
+
+This uses the current sync script with the original tagged package source and
+tested binaries. It does not rebuild binaries or move tags. Retry comparisons
+check file names, types, and bytes while tolerating executable-bit differences
+from artifact downloads; new snapshots normalize regular files to mode 0644.
+Different zlib builds can produce different gzip bytes for identical addons.
+On a retry, the original released entry point is reused only if the JavaScript
+body is identical and both versions' embedded addons decompress to the exact
+same native files. No existing release files or tags are rewritten.
+
 ## One-time configuration
 
 - Forge's `GITHUB_TOKEN` in encrypted `.env.ci` needs Contents and Workflows write
